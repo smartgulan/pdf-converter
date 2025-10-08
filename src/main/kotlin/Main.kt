@@ -9,7 +9,7 @@ import javafx.stage.Stage
 class Main: Application() {
 
     override fun start(stage: Stage) {
-        val fxmlLoader = FXMLLoader(javaClass.getResource("/views/file_browser.fxml"))
+        val fxmlLoader = FXMLLoader(javaClass.getResource("/fxml/file_browser.fxml"))
         val scene = Scene(fxmlLoader.load(), 1200.0, 600.0)
         stage.title = "Pdf Converter"
         stage.scene = scene
@@ -18,6 +18,6 @@ class Main: Application() {
 
 }
 
-fun main() {
-    launch()
+fun main(args: Array<String>) {
+    Application.launch(Main::class.java, *args)
 }

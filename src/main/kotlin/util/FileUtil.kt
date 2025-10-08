@@ -1,8 +1,9 @@
 package kz.util
 
-import org.jodconverter.local.JodConverter
-import org.jodconverter.local.office.LocalOfficeManager
+import org.docx4j.Docx4J
+import org.docx4j.openpackaging.packages.WordprocessingMLPackage
 import java.io.File
+import java.io.FileOutputStream
 
 object FileUtil {
 
@@ -10,23 +11,21 @@ object FileUtil {
 
     fun convertDocxToPdf(filePath: String): File {
         try {
-            val officeManager = LocalOfficeManager.install()
-            officeManager.start()
-
             val inputFile = File(filePath)
             val outputFile = File(inputFile.parent, inputFile.nameWithoutExtension + ".pdf")
 
-            JodConverter
-                .convert(inputFile)
-                .to(outputFile)
-                .execute()
+            val wordMLPackage = WordprocessingMLPackage.load(inputFile)
 
-            officeManager.stop()
+            FileOutputStream(outputFile).use { os ->
+                Docx4J.toPDF(wordMLPackage, os)
+            }
+
             println("✅ PDF сохранён: ${outputFile.absolutePath}")
             return outputFile
+
         } catch (e: Exception) {
             e.printStackTrace()
-            throw e
+            throw RuntimeException("Ошибка конвертации: ${e.message}", e)
         }
     }
 

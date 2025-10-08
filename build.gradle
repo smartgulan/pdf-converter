@@ -1,6 +1,7 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '2.0.21'
     id 'org.openjfx.javafxplugin' version '0.0.13'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 javafx {
@@ -17,15 +18,102 @@ repositories {
 
 dependencies {
     def javaFxVersion = '17'
-
     implementation "org.openjfx:javafx-controls:$javaFxVersion"
     implementation "org.openjfx:javafx-fxml:$javaFxVersion"
-    implementation "org.jodconverter:jodconverter-local:4.4.6"
     implementation "org.slf4j:slf4j-simple:2.0.16"
-
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx:1.8.1")
+    implementation "org.docx4j:docx4j-JAXB-ReferenceImpl:11.4.11"
+    implementation "org.docx4j:docx4j-export-fo:11.4.11"
 }
 
 kotlin {
     jvmToolchain(17)
+}
+
+shadowJar {
+    archiveBaseName.set('pdf-converter')
+    archiveClassifier.set('all')
+    archiveVersion.set('')
+    manifest {
+        attributes(
+                'Main-Class': 'kz.MainKt',
+                'Implementation-Version': version,
+                'Multi-Release': 'true'
+        )
+    }
+    mergeServiceFiles()
+    append('META-INF/spring.handlers')
+    append('META-INF/spring.schemas')
+    append('META-INF/spring.tooling')
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    exclude 'module-info.class'
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.ServiceFileTransformer)
+}
+
+tasks.register('createSingleExe') {
+    dependsOn 'shadowJar'
+    group = "distribution"
+    description = "Create single EXE file with embedded JAR using Launch4j"
+    doLast {
+        def exeDir = file("${buildDir}/exe")
+        exeDir.mkdirs()
+        def jarFile = tasks.shadowJar.archiveFile.get().asFile
+        def exeFile = new File(exeDir, "PDFConverter.exe")
+        def iconFile = file("src/main/resources/icon.ico")
+        println("📦 Creating single EXE with Launch4j...")
+        println("   JAR: ${jarFile.name} (${jarFile.length() / 1024 / 1024} MB)")
+        def configFile = new File(exeDir, "launch4j-config.xml")
+        configFile.text = """<?xml version="1.0" encoding="UTF-8"?>
+<launch4jConfig>
+    <dontWrapJar>false</dontWrapJar>
+    <headerType>gui</headerType>
+    <jar>${jarFile.absolutePath}</jar>
+    <outfile>${exeFile.absolutePath}</outfile>
+    <errTitle>PDF Converter - Error</errTitle>
+    <cmdLine></cmdLine>
+    <chdir>.</chdir>
+    <priority>normal</priority>
+    <downloadUrl>https://adoptium.net/temurin/releases/?version=17</downloadUrl>
+    <supportUrl></supportUrl>
+    <stayAlive>false</stayAlive>
+    <restartOnCrash>false</restartOnCrash>
+    <manifest></manifest>
+    <icon>${iconFile.absolutePath}</icon>
+    <jre>
+        <path></path>
+        <bundledJre64Bit>true</bundledJre64Bit>
+        <bundledJreAsFallback>false</bundledJreAsFallback>
+        <minVersion>17</minVersion>
+        <maxVersion></maxVersion>
+        <jdkPreference>preferJre</jdkPreference>
+        <runtimeBits>64</runtimeBits>
+        <opt>-Dfile.encoding=UTF-8</opt>
+    </jre>
+</launch4jConfig>"""
+        def launch4jPaths = [
+                "C:\\Program Files (x86)\\Launch4j\\launch4jc.exe",
+                "C:\\Program Files\\Launch4j\\launch4jc.exe",
+                "${System.getenv('LOCALAPPDATA')}\\Launch4j\\launch4jc.exe"
+        ]
+        def launch4jExe = launch4jPaths.find { new File(it).exists() }
+        if (!launch4jExe) {
+            throw new GradleException("""
+                Launch4j not found!
+                Searched in:
+                ${launch4jPaths.join('\n                ')}
+                
+                Please install Launch4j from: https://launch4j.sourceforge.net/
+            """.stripIndent())
+        }
+        println("   Using Launch4j: $launch4jExe")
+        exec {
+            commandLine launch4jExe, configFile.absolutePath
+        }
+        println("✅ Single EXE created successfully!")
+        println("   Location: ${exeFile.absolutePath}")
+        println("   Size: ${exeFile.length() / 1024 / 1024} MB")
+        println("")
+        println("⚠️  Note: Users need Java 17+ installed to run this EXE")
+        println("   If Java is missing, they'll get a download link automatically")
+    }
 }
