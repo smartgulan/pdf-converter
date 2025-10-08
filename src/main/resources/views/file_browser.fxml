@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="10.0" alignment="CENTER"
+      xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="kz.controller.FileBrowserController">
+
+    <Label text="select file:"/>
+    <Button text="view..." onAction="#onBrowseFile"/>
+    <Label fx:id="selectedFileLabel" text="file not chosen"/>
+    <ProgressBar fx:id="progressBar" prefWidth="200" visible="false"/>
+
+</VBox>
